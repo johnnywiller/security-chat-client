@@ -11,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.KeySpec;
 
 import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPrivateKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHPublicKeySpec;
@@ -69,7 +70,7 @@ public class DiffieHellmanUitls {
 		final KeyAgreement keyAgreement = KeyAgreement.getInstance("DH");
 		keyAgreement.init(privateKey);
 		keyAgreement.doPhase(publicKey, true);
-
+		
 		byte[] commonSecret = keyAgreement.generateSecret();
 
 		return commonSecret;
