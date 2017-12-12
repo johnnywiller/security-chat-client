@@ -5,6 +5,7 @@ import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import javax.crypto.Cipher;
 import javax.crypto.interfaces.DHPrivateKey;
@@ -15,19 +16,18 @@ import javax.crypto.spec.SecretKeySpec;
 public class MessageEncryptor {
 
 	private ServerSocket server;
-
+	private HashMap<String, DestinationUser> destinationUsers;	
 	private byte[] symmetricKey;
 	private byte[] macKey;
-	private byte[] iv;
-	private Cipher cipher;
-
+	
 	public MessageEncryptor() throws Exception {
 		this.server = new ServerSocket();
 		DiffieHellmanUitls dh = new DiffieHellmanUitls();
 		DHPublicKey publicKey;
 		KeyPair keyPair;
 		byte[] secret;
-	
+		destinationUsers = new HashMap<>();
+		
 		// --------- DH Kex PROCESS --------- 
 		
 		// compute DH keys ('a' and A = g^a mod p)
@@ -51,8 +51,13 @@ public class MessageEncryptor {
 
 	}
 
-	public void encryptMessage(String msg) throws Exception {
-
+	public void encryptMessage(String msg, String destUser) throws Exception {
+		
+		// adds new user to our key store
+		if (!destinationUsers.containsKey(destUser)) {
+			addDestinationUser(destUser);
+		}
+		
 		SecretKeySpec secretKeySpec = new SecretKeySpec(symmetricKey, "AES");
 
 		byte[] iv = new byte[16];
@@ -84,5 +89,20 @@ public class MessageEncryptor {
 		// System.out.println("CLIENT secret");
 		// System.out.println(Arrays.toString(secret));
 	}
-
+	
+	private void addDestinationUser(String destUser) {
+		
+		DestinationUser user = new DestinationUser();
+		
+		
+	}
+	
+	private byte[] requestUserPublicKey(String destUser) throws IOException {
+		
+		server.getOut().writeUTF("get public key :" + destUser);
+		
+		
+		return null;
+	}
+	
 }

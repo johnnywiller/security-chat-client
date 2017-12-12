@@ -11,7 +11,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.KeySpec;
 
 import javax.crypto.KeyAgreement;
-import javax.crypto.SecretKey;
 import javax.crypto.interfaces.DHPrivateKey;
 import javax.crypto.interfaces.DHPublicKey;
 import javax.crypto.spec.DHPublicKeySpec;
