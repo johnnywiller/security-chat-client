@@ -24,7 +24,8 @@ public class ServerSocket {
 
 			InputStream inFromServer = client.getInputStream();
 			this.in = new ObjectInputStream(inFromServer);
-
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
