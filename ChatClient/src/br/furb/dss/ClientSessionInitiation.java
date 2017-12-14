@@ -27,12 +27,16 @@ public class ClientSessionInitiation {
 		this.server = server;
 	}
 
-	public DestinationUser startSession(String user) throws Exception {
+	public DestinationUser startSession(String user, boolean isInitialApplicant) throws Exception {
 
 		DestinationUser dest = new DestinationUser();
 
-		server.getOut().writeUTF("sessionstart " + user);
-		server.getOut().flush();
+		// verifies if is this user starting the DH process or is only handling a
+		// previous started DH from another user
+		if (isInitialApplicant) {
+			server.getOut().writeUTF("sessionstart " + user);
+			server.getOut().flush();
+		}
 
 		DHPublicKey publicKey;
 		KeyPair keyPair;
