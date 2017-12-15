@@ -12,10 +12,14 @@ import javax.crypto.spec.SecretKeySpec;
 public class MessageEncryptor {
 
 	private ServerSocket server;
-	Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-
-	public MessageEncryptor(ServerSocket server) throws Exception {
+	private Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+	
+	private byte[] ourUserName;
+	private final int MAX_NAME_SIZE = 10;
+	
+	public MessageEncryptor(ServerSocket server, String ourUserName) throws Exception {
 		this.server = server;
+		this.ourUserName = Arrays.copyOf(ourUserName.getBytes(), MAX_NAME_SIZE);
 	}
 
 	public void sendEncryptedMessage(Message message) throws Exception {
@@ -40,9 +44,11 @@ public class MessageEncryptor {
 		dest.setIv(cipher.getIV());
 
 		// copy IV and cipher to a new array to send over the network
-		byte[] packet = new byte[cipherText.length + iv.length + 1];
-		System.arraycopy(iv, 0, packet, 1, iv.length);
-		System.arraycopy(cipherText, 0, packet, iv.length + 1, cipherText.length);
+		byte[] packet = new byte[cipherText.length + iv.length + MAX_NAME_SIZE + 1];
+		
+		System.arraycopy(ourUserName, 0, packet, 1, MAX_NAME_SIZE);
+		System.arraycopy(iv, 0, packet, MAX_NAME_SIZE + 2, iv.length);
+		System.arraycopy(cipherText, 0, packet, MAX_NAME_SIZE + iv.length + 2, cipherText.length);
 
 		// set the packet size
 		packet[0] = ((byte) (packet.length - 1));
@@ -54,10 +60,15 @@ public class MessageEncryptor {
 		System.out.println("Message sent");
 	}
 
-	public Message decryptMessage(byte[] packet, String fromUser) throws Exception {
+	public Message decryptMessage(byte[] packet) throws Exception {
 
 		Message message = new Message();
 
+		// extract the user from the packet
+		byte[] bytesFromUser = Arrays.copyOf(packet, 10);
+						
+		String fromUser = new String(bytesFromUser);
+		
 		// get user keys
 		DestinationUser from = ClientsKeyStore.getInstance().getUser(fromUser);
 
@@ -67,7 +78,7 @@ public class MessageEncryptor {
 			throw new Exception("Client isn't in the keystore");
 		}
 
-		byte[] iv = Arrays.copyOf(packet, 16);
+		byte[] iv = Arrays.copyOfRange(packet, 10, 27);
 		from.setIv(iv);
 
 		configureCipher(from, false);
@@ -80,7 +91,8 @@ public class MessageEncryptor {
 
 		message.setMessage(new String(msg));
 		message.setTimestamp(timestamp);
-
+		message.setRecipient(fromUser);
+		
 		return message;
 	}
 
