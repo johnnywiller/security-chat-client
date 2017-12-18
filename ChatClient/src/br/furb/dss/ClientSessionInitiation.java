@@ -81,7 +81,9 @@ public class ClientSessionInitiation {
 	}
 
 	private void initiateKex(String value) throws IOException {
-
+		
+		System.out.println("initiate KEX");
+		
 		String msg = "/startsession " + value;
 
 		byte[] packet = new byte[msg.length() + 1];
@@ -98,6 +100,8 @@ public class ClientSessionInitiation {
 	}
 	
 	private void ackKex(String value) throws IOException {
+		
+		System.out.println("ack kex");
 		
 		String msg = "/acksession " + value;
 

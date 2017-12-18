@@ -67,9 +67,9 @@ public class MessageEncryptor {
 		// copy IV and cipher to a new array to send over the network
 		byte[] packet = new byte[cipherText.length + iv.length + MAX_NAME_SIZE + 1];
 
-		System.arraycopy(ourUserName, 0, packet, 1, MAX_NAME_SIZE);
-		System.arraycopy(iv, 0, packet, MAX_NAME_SIZE + 2, iv.length);
-		System.arraycopy(cipherText, 0, packet, MAX_NAME_SIZE + iv.length + 2, cipherText.length);
+		//System.arraycopy(ourUserName, 0, packet, 1, MAX_NAME_SIZE);
+		System.arraycopy(iv, 0, packet, 1, iv.length);
+		System.arraycopy(cipherText, 0, packet, iv.length + 2, cipherText.length);
 
 		// set the packet size
 		packet[0] = ((byte) (packet.length - 1));
@@ -84,7 +84,7 @@ public class MessageEncryptor {
 	public Message decryptMessage(byte[] packet) throws Exception {
 
 		Message message = new Message();
-
+		System.out.println("msg received");
 		// extract the user from the packet
 		byte[] bytesFromUser = Arrays.copyOf(packet, 10);
 

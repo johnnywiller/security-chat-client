@@ -48,19 +48,17 @@ public class ListeningServer extends Thread {
 				if (pause)
 					lock.wait();
 
-				receivedPacket = new byte[MAX_BUF];
-
 				if (server.getIn().available() > 0) {
+					
+					receivedPacket = new byte[MAX_BUF];
+
 					server.getIn().read(receivedPacket);
 
 					receivedPacket = getResizedPacket(receivedPacket);
 
 					parsePacket(receivedPacket);
 
-				} else {
-					sleep(3000);
 				}
-
 			}
 
 		}
