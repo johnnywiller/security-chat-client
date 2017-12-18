@@ -1,5 +1,6 @@
 package br.furb.dss;
 
+import java.io.IOException;
 import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -34,8 +35,9 @@ public class ClientSessionInitiation {
 		// verifies if is this user starting the DH process or is only handling a
 		// previous started DH from another user
 		if (isInitialApplicant) {
-			server.getOut().writeUTF("sessionstart " + user);
-			server.getOut().flush();
+			initiateKex(user);
+		} else {
+			ackKex(user);
 		}
 
 		DHPublicKey publicKey;
@@ -49,7 +51,7 @@ public class ClientSessionInitiation {
 
 		// pass A (A = g^a mod p) to the server
 		dh.passPublicToServer((DHPublicKey) keyPair.getPublic(), server.getOut());
-		server.getOut().flush();
+
 		// get B (g^b mod p) from the server
 		publicKey = dh.getServerPublic(server.getIn());
 
@@ -76,6 +78,36 @@ public class ClientSessionInitiation {
 		ClientsKeyStore.getInstance().addUser(dest);
 
 		return dest;
+	}
+
+	private void initiateKex(String value) throws IOException {
+
+		String msg = "/startsession " + value;
+
+		byte[] packet = new byte[msg.length() + 1];
+
+		packet[0] = (byte) msg.length();
+
+		System.arraycopy(msg.getBytes(), 0, packet, 1, msg.getBytes().length);
+
+		server.getOut().write(packet);
+		server.getOut().flush();
+
+	}
+	
+	private void ackKex(String value) throws IOException {
+		
+		String msg = "/acksession " + value;
+
+		byte[] packet = new byte[msg.length() + 1];
+
+		packet[0] = (byte) msg.length();
+
+		System.arraycopy(msg.getBytes(), 0, packet, 1, msg.getBytes().length);
+
+		server.getOut().write(packet);
+		server.getOut().flush();
+		
 	}
 
 }

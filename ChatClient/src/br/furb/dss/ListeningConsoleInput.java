@@ -1,6 +1,5 @@
 package br.furb.dss;
 
-import java.io.IOException;
 import java.util.Scanner;
 
 public class ListeningConsoleInput extends Thread {
@@ -32,13 +31,47 @@ public class ListeningConsoleInput extends Thread {
 
 			String read = sc.nextLine();
 
+			Message msg = parseMessageString(read);
+
 			try {
-				server.getOut().writeUTF(read);
-				server.getOut().flush();
-			} catch (IOException e) {
+
+				encryptor.sendEncryptedMessage(msg);
+
+				//server.getOut().writeUTF(read);
+				//server.getOut().flush();
+
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private Message parseMessageString(String message) {
+
+		Message msg = new Message();
+
+		String[] tokenized = message.split(" ");
+
+		switch (tokenized[0]) {
+
+		case "/msg":
+			if (tokenized[1] == null || tokenized[1].isEmpty())
+				return null;
+
+			msg.setRecipient(tokenized[1]);
+
+			msg.setMessage(message.substring(message.indexOf(tokenized[1]) + tokenized[1].length()));
+
+			msg.setTimestamp(System.currentTimeMillis());
+
+			return msg;
+
+		case "/changeuser":
+			break;
+
+		}
+	
+		return null;
 	}
 
 }

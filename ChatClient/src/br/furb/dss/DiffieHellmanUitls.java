@@ -45,6 +45,8 @@ public class DiffieHellmanUitls {
 		out.writeObject(p);
 		out.writeObject(g);
 		out.writeObject(y);
+		
+		out.flush();
 	}
 
 	public DHPublicKey getServerPublic(ObjectInputStream in) throws Exception {

@@ -13,14 +13,31 @@ public class MessageEncryptor {
 
 	private ServerSocket server;
 	private Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+
+	private Cipher serverEncryptor = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+	private Cipher serverDecryptor = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+
+	private ListeningServer listenServer;
+
 	
 	private byte[] ourUserName;
 	private final int MAX_NAME_SIZE = 10;
-	
+
 	public MessageEncryptor(ServerSocket server, String ourUserName) throws Exception {
 		this.server = server;
 		this.ourUserName = Arrays.copyOf(ourUserName.getBytes(), MAX_NAME_SIZE);
 	}
+
+	private void initializeServerEncryptors() {
+
+		// serverEncryptor.ini
+
+	}
+	
+	public void setListenServer(ListeningServer listenServer) {
+		this.listenServer = listenServer;
+	}
+
 
 	public void sendEncryptedMessage(Message message) throws Exception {
 
@@ -30,7 +47,11 @@ public class MessageEncryptor {
 		// we don't have made a handshake with this client yet
 		// so we need to establish a session
 		if (dest == null) {
-			dest = ClientSessionInitiation.getInstance().startSession(message.getRecipient(), true);
+			synchronized (listenServer) {
+				listenServer.wait();
+				dest = ClientSessionInitiation.getInstance().startSession(message.getRecipient(), true);
+				listenServer.notify();
+			}
 		}
 
 		// sets cipher to destination user
@@ -45,7 +66,7 @@ public class MessageEncryptor {
 
 		// copy IV and cipher to a new array to send over the network
 		byte[] packet = new byte[cipherText.length + iv.length + MAX_NAME_SIZE + 1];
-		
+
 		System.arraycopy(ourUserName, 0, packet, 1, MAX_NAME_SIZE);
 		System.arraycopy(iv, 0, packet, MAX_NAME_SIZE + 2, iv.length);
 		System.arraycopy(cipherText, 0, packet, MAX_NAME_SIZE + iv.length + 2, cipherText.length);
@@ -66,9 +87,9 @@ public class MessageEncryptor {
 
 		// extract the user from the packet
 		byte[] bytesFromUser = Arrays.copyOf(packet, 10);
-						
+
 		String fromUser = new String(bytesFromUser);
-		
+
 		// get user keys
 		DestinationUser from = ClientsKeyStore.getInstance().getUser(fromUser);
 
@@ -92,7 +113,7 @@ public class MessageEncryptor {
 		message.setMessage(new String(msg));
 		message.setTimestamp(timestamp);
 		message.setRecipient(fromUser);
-		
+
 		return message;
 	}
 
@@ -106,6 +127,10 @@ public class MessageEncryptor {
 		cipher.init(encrypt ? Cipher.ENCRYPT_MODE : cipher.DECRYPT_MODE, secretKeySpec, ivSpec);
 
 		return cipher;
+	}
+
+	public void encryptToServer(String message) {
+
 	}
 
 	private void updateDestIV(DestinationUser dest, byte[] iv) {
