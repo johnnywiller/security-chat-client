@@ -3,7 +3,6 @@ package br.furb.dss;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.util.Arrays;
 
 import javax.crypto.interfaces.DHPrivateKey;
@@ -122,11 +121,13 @@ public class ClientSessionInitiation {
 		server.getOut().write(packet);
 		server.getOut().flush();
 
-		byte[] pubKey = new byte[256];
-
-		server.getIn().read(pubKey);
+		byte[] pubKey = new byte[384];
 		
-		return pubKey;
+		server.getIn().read(pubKey);
+				
+		byte[] resizedPubKey = Arrays.copyOfRange(pubKey, 1, 200+pubKey[0]);
+		
+		return resizedPubKey;
 
 	}
 

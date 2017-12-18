@@ -1,12 +1,12 @@
 package br.furb.dss;
 
-import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -15,23 +15,17 @@ public class MessageEncryptor {
 	private ServerSocket server;
 	private Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
 
-	private Cipher serverEncryptor = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-	private Cipher serverDecryptor = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+	private final int HMAC_SIZE = 32;
+
+	Mac hasher = Mac.getInstance("HmacSHA256");
 
 	private ListeningServer listenServer;
 
-	private byte[] ourUserName;
 	private final int MAX_NAME_SIZE = 10;
 
-	public MessageEncryptor(ServerSocket server, String ourUserName) throws Exception {
+	public MessageEncryptor(ServerSocket server) throws Exception {
 		this.server = server;
-		this.ourUserName = Arrays.copyOf(ourUserName.getBytes(), MAX_NAME_SIZE);
-	}
-
-	private void initializeServerEncryptors() {
-
-		// serverEncryptor.ini
-
+		
 	}
 
 	public void setListenServer(ListeningServer listenServer) {
@@ -64,13 +58,16 @@ public class MessageEncryptor {
 		byte[] cipherText = cipher.doFinal(message.getMessage().getBytes());
 
 		// copy IV and cipher to a new array to send over the network
-		byte[] packet = new byte[cipherText.length + iv.length + MAX_NAME_SIZE + 1];
+		byte[] packet = new byte[HMAC_SIZE + cipherText.length + iv.length + MAX_NAME_SIZE + 1];
 
 		byte[] bDestUser = String.format("%1$10s", destUser.getName()).getBytes();
 
+		byte[] hash = generateHMAC(iv, cipherText, destUser.getMacKey());
+
 		System.arraycopy(bDestUser, 0, packet, 1, MAX_NAME_SIZE);
-		System.arraycopy(iv, 0, packet, MAX_NAME_SIZE + 1, iv.length);
-		System.arraycopy(cipherText, 0, packet, MAX_NAME_SIZE + iv.length + 1, cipherText.length);
+		System.arraycopy(hash, 0, packet, MAX_NAME_SIZE + 1, hash.length);
+		System.arraycopy(iv, 0, packet, MAX_NAME_SIZE + 1 + hash.length, iv.length);
+		System.arraycopy(cipherText, 0, packet, MAX_NAME_SIZE + hash.length + iv.length + 1, cipherText.length);
 
 		// set the packet size
 		packet[0] = ((byte) (packet.length - 1));
@@ -82,12 +79,26 @@ public class MessageEncryptor {
 		System.out.println("Message sent");
 	}
 
+	private byte[] generateHMAC(byte[] iv, byte[] cipherText, byte[] macKey) throws InvalidKeyException {
+
+		byte[] packet = new byte[iv.length + cipherText.length];
+		System.arraycopy(iv, 0, packet, 0, iv.length);
+		System.arraycopy(cipherText, 0, packet, iv.length, cipherText.length);
+
+		hasher.init(new SecretKeySpec(macKey, "HmacSHA256"));
+
+		byte[] hash = hasher.doFinal(packet);
+
+		return hash;
+	}
+
 	public Message decryptMessage(byte[] packet) throws Exception {
 
 		Message message = new Message();
 		System.out.println("msg received");
 		// extract the user from the packet
-		byte[] bytesFromUser = Arrays.copyOf(packet, 10);
+
+		byte[] bytesFromUser = Arrays.copyOf(packet, MAX_NAME_SIZE);
 
 		String fromUser = new String(bytesFromUser).trim();
 
@@ -100,12 +111,19 @@ public class MessageEncryptor {
 			throw new Exception("Client isn't in the keystore");
 		}
 
-		byte[] iv = Arrays.copyOfRange(packet, 10, 26);
+		// HMAC-SHA256 size is 32
+		byte[] hash = Arrays.copyOfRange(packet, MAX_NAME_SIZE, MAX_NAME_SIZE + 32);
+
+		// IV size is 16
+		byte[] iv = Arrays.copyOfRange(packet, MAX_NAME_SIZE + hash.length, MAX_NAME_SIZE + hash.length + 16);
 		from.setIv(iv);
 
 		configureCipher(from, false);
 
-		byte[] cipherText = Arrays.copyOfRange(packet, 26, packet.length);
+		byte[] cipherText = Arrays.copyOfRange(packet, MAX_NAME_SIZE + hash.length + iv.length, packet.length);
+
+		// check packet integrity, throws an exception if not satisfied
+		requireIntegrity(iv, cipherText, hash, from.getMacKey());
 
 		byte[] plainText = cipher.doFinal(cipherText);
 
@@ -118,6 +136,16 @@ public class MessageEncryptor {
 		message.setRecipient(fromUser);
 
 		return message;
+	}
+
+	private void requireIntegrity(byte[] iv, byte[] cipherText, byte[] hash, byte[] macKey) throws Exception {
+
+		byte[] wanted = generateHMAC(iv, cipherText, macKey);
+
+		if (!Arrays.equals(wanted, hash)) {
+			throw new Exception("Hash of packet didn't match... MitM attack?");
+		}
+
 	}
 
 	private Cipher configureCipher(DestinationUser dest, boolean encrypt)
@@ -141,13 +169,6 @@ public class MessageEncryptor {
 
 	public void encryptToServer(String message) {
 
-	}
-
-	private byte[] requestUserPublicKey(String destUser) throws IOException {
-
-		server.getOut().writeUTF("get public key :" + destUser);
-
-		return null;
 	}
 
 	public static byte[] longToBytes(long l) {

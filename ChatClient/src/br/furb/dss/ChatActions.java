@@ -15,7 +15,7 @@ public class ChatActions {
 		switch (action) {
 
 		case CHANGE_USERNAME:
-			sendUsername(value[1]);
+			//sendUsername(value[1]);
 			break;
 
 		}

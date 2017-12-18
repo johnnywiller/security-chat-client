@@ -1,6 +1,5 @@
 package br.furb.dss;
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
@@ -34,7 +33,7 @@ public class DiffieHellmanUitls {
 	 *            our DH public key
 	 * @param out
 	 *            server socket stream
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public void passPublicToServer(DHPublicKey publicKey, ObjectOutputStream out) throws Exception {
 		BigInteger p, g, y;
@@ -44,9 +43,12 @@ public class DiffieHellmanUitls {
 		y = publicKey.getY();
 
 		out.write(signDHParameter(p));
+		out.flush();
+		
 		out.write(signDHParameter(g));
+		out.flush();
+		
 		out.write(signDHParameter(y));
-
 		out.flush();
 	}
 
@@ -69,24 +71,26 @@ public class DiffieHellmanUitls {
 
 	private byte[] signDHParameter(BigInteger dhParam) throws Exception {
 
-		byte[] signedDH = new byte[512];
+		byte[] signedDH = new byte[385];
 
 		byte[] param = dhParam.toByteArray();
 
 		byte[] signature = Signer.getInstance().sign(param);
 
 		System.arraycopy(signature, 0, signedDH, 0, signature.length);
-		System.arraycopy(param, 0, signedDH, signature.length + 1, param.length);
+		System.arraycopy(param, 0, signedDH, signature.length, param.length);
 
 		return signedDH;
 	}
 
 	private BigInteger verifyDHParametersSignature(ObjectInputStream in, byte[] pubKey) throws Exception {
 
-		byte[] packet = new byte[512];
+		byte[] packet = new byte[385];
 
 		in.read(packet);
-
+		
+		//byte dhSize = packet[0];
+		
 		byte[] signature = Arrays.copyOf(packet, 256);
 		byte[] content = Arrays.copyOfRange(packet, 256, packet.length);
 

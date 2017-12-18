@@ -1,8 +1,6 @@
 package br.furb.dss;
 
-import java.awt.SecondaryLoop;
 import java.io.IOException;
-import java.util.Random;
 
 public class Main {
 
@@ -10,17 +8,15 @@ public class Main {
 		
 		byte[] pub = Signer.getInstance().getPublicKey();
 		
-		String s = (new Random().nextInt()) % 1000 + "";
-
 		ServerSocket server = new ServerSocket();
 
-		MessageEncryptor msgEncryptor = new MessageEncryptor(server, s);
+		MessageEncryptor msgEncryptor = new MessageEncryptor(server);
 
-		ChatActions action = new ChatActions(msgEncryptor);
+		//ChatActions action = new ChatActions(msgEncryptor);
 
 		sendPublicKeyServer(server);
 
-		action.sendAction(EChatActions.CHANGE_USERNAME, s);
+		//action.sendAction(EChatActions.CHANGE_USERNAME);
 
 		ListeningServer listening = new ListeningServer(server, msgEncryptor);
 
@@ -38,6 +34,7 @@ public class Main {
 		byte[] pubKey = Signer.getInstance().getPublicKey();
 
 		server.getOut().write(pubKey);
+		server.getOut().flush();
 
 	}
 

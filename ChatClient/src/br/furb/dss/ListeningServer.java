@@ -1,5 +1,6 @@
 package br.furb.dss;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 public class ListeningServer extends Thread {
@@ -50,7 +51,9 @@ public class ListeningServer extends Thread {
 					lock.wait();
 
 				if (server.getIn().available() > 0) {
-
+					
+					System.out.println("read");
+					
 					receivedPacket = new byte[MAX_BUF];
 
 					server.getIn().read(receivedPacket);
@@ -74,9 +77,12 @@ public class ListeningServer extends Thread {
 		switch (tokenized[0]) {
 
 		case "/startsession":
+			System.out.println("start session");
 			startSession(tokenized[1]);
 			break;
-
+		case "/online":
+			printOnline();
+			break;
 		default:
 			Message msg = decryptPacket(packet);
 
@@ -84,6 +90,16 @@ public class ListeningServer extends Thread {
 
 			break;
 
+		}
+
+	}
+
+	private void printOnline() throws IOException {
+
+		String online = server.getIn().readLine();
+
+		while (online != "/endonline") {
+			System.out.println("[" + online + "]");
 		}
 
 	}

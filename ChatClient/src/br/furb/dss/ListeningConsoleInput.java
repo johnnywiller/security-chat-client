@@ -1,5 +1,6 @@
 package br.furb.dss;
 
+import java.io.IOException;
 import java.util.Scanner;
 
 public class ListeningConsoleInput extends Thread {
@@ -23,7 +24,7 @@ public class ListeningConsoleInput extends Thread {
 		}
 	}
 
-	private void listen() {
+	private void listen() throws IOException {
 
 		Scanner sc = new Scanner(System.in);
 
@@ -46,7 +47,7 @@ public class ListeningConsoleInput extends Thread {
 		}
 	}
 
-	private Message parseMessageString(String message) {
+	private Message parseMessageString(String message) throws IOException {
 
 		if (message == null || message.trim().isEmpty())
 			return null;
@@ -69,12 +70,20 @@ public class ListeningConsoleInput extends Thread {
 
 			return msg;
 
-		case "/changeuser":
+		case "/online":
+			sendOnline();
 			break;
 
 		}
 
 		return null;
+	}
+
+	private void sendOnline() throws IOException {
+
+		server.getOut().write("/online".getBytes());
+		server.getOut().flush();
+
 	}
 
 }
