@@ -8,6 +8,10 @@ public class ListeningServer extends Thread {
 	private final int MAX_BUF = 255;
 	private MessageEncryptor encryptor;
 
+	private Object lock = new Object();
+
+	private volatile boolean pause;
+
 	public ListeningServer(ServerSocket server, MessageEncryptor encryptor) throws Exception {
 		this.server = server;
 		this.encryptor = encryptor;
@@ -23,22 +27,43 @@ public class ListeningServer extends Thread {
 		}
 	}
 
+	public void pauseListen() throws InterruptedException {
+		pause = true;
+	}
+
+	public void resumeListen() {
+		synchronized (lock) {
+			lock.notify();
+		}
+	}
+
 	private void listen() throws Exception {
 
-		byte[] receivedPacket;
+		synchronized (lock) {
 
-		while (true) {
+			byte[] receivedPacket;
 
-			receivedPacket = new byte[MAX_BUF];
+			while (true) {
 
-			server.getIn().read(receivedPacket);
+				if (pause)
+					lock.wait();
 
-			receivedPacket = getResizedPacket(receivedPacket);
+				receivedPacket = new byte[MAX_BUF];
 
-			parsePacket(receivedPacket);
+				if (server.getIn().available() > 0) {
+					server.getIn().read(receivedPacket);
+
+					receivedPacket = getResizedPacket(receivedPacket);
+
+					parsePacket(receivedPacket);
+
+				} else {
+					sleep(3000);
+				}
+
+			}
 
 		}
-
 	}
 
 	private void parsePacket(byte[] packet) throws Exception {
@@ -65,7 +90,7 @@ public class ListeningServer extends Thread {
 	}
 
 	private void startSession(String client) throws Exception {
-		ClientSessionInitiation.getInstance().startSession(client, false);
+		ClientSessionInitiation.getInstance(server).startSession(client, false);
 	}
 
 	private Message decryptPacket(byte[] packet) throws Exception {

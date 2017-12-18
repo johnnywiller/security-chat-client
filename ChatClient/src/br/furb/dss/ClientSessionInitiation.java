@@ -12,10 +12,10 @@ import javax.crypto.interfaces.DHPublicKey;
 public class ClientSessionInitiation {
 
 	private DiffieHellmanUitls dh = new DiffieHellmanUitls();
-	private static ServerSocket server = new ServerSocket();
+	private static ServerSocket server;
 	private static ClientSessionInitiation instance;
 
-	public static ClientSessionInitiation getInstance() {
+	public static ClientSessionInitiation getInstance(ServerSocket server) {
 
 		if (instance == null)
 			instance = new ClientSessionInitiation(server);
@@ -92,6 +92,8 @@ public class ClientSessionInitiation {
 
 		server.getOut().write(packet);
 		server.getOut().flush();
+		
+		System.out.println("mandou");
 
 	}
 	

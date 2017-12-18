@@ -19,7 +19,6 @@ public class MessageEncryptor {
 
 	private ListeningServer listenServer;
 
-	
 	private byte[] ourUserName;
 	private final int MAX_NAME_SIZE = 10;
 
@@ -33,11 +32,10 @@ public class MessageEncryptor {
 		// serverEncryptor.ini
 
 	}
-	
+
 	public void setListenServer(ListeningServer listenServer) {
 		this.listenServer = listenServer;
 	}
-
 
 	public void sendEncryptedMessage(Message message) throws Exception {
 
@@ -47,13 +45,15 @@ public class MessageEncryptor {
 		// we don't have made a handshake with this client yet
 		// so we need to establish a session
 		if (dest == null) {
-			synchronized (listenServer) {
-				listenServer.wait();
-				dest = ClientSessionInitiation.getInstance().startSession(message.getRecipient(), true);
-				listenServer.notify();
-			}
-		}
+			System.out.println("Initiating session");
+			listenServer.pauseListen();
 
+			dest = ClientSessionInitiation.getInstance(server).startSession(message.getRecipient(), true);
+			
+			listenServer.resumeListen();
+			
+		}
+		System.out.println("Session Initiated");
 		// sets cipher to destination user
 		configureCipher(dest, true);
 
