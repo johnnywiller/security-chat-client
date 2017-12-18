@@ -67,13 +67,7 @@ public class ClientSessionInitiation {
 
 		dest.setSymmetricKey(symmetricKey);
 		dest.setMacKey(macKey);
-
-		byte[] iv = new byte[16];
-		SecureRandom random = new SecureRandom();
-		random.nextBytes(iv);
-
-		dest.setIv(iv);
-
+		dest.setName(user);
 		// add user to keystore
 		ClientsKeyStore.getInstance().addUser(dest);
 

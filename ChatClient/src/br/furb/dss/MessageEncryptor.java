@@ -3,6 +3,7 @@ package br.furb.dss;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 import javax.crypto.Cipher;
@@ -40,36 +41,36 @@ public class MessageEncryptor {
 	public void sendEncryptedMessage(Message message) throws Exception {
 
 		// get user keys
-		DestinationUser dest = ClientsKeyStore.getInstance().getUser(message.getRecipient());
+		DestinationUser destUser = ClientsKeyStore.getInstance().getUser(message.getRecipient());
 
 		// we don't have made a handshake with this client yet
 		// so we need to establish a session
-		if (dest == null) {
+		if (destUser == null) {
 			System.out.println("Initiating session");
 			listenServer.pauseListen();
 
-			dest = ClientSessionInitiation.getInstance(server).startSession(message.getRecipient(), true);
-			
+			destUser = ClientSessionInitiation.getInstance(server).startSession(message.getRecipient(), true);
+
 			listenServer.resumeListen();
-			
+
 		}
 		System.out.println("Session Initiated");
 		// sets cipher to destination user
-		configureCipher(dest, true);
+		configureCipher(destUser, true);
 
 		byte[] iv = cipher.getIV();
 
-		byte[] timestamp = cipher.update(longToBytes(message.getTimestamp()));
+		cipher.update(longToBytes(message.getTimestamp()));
 		byte[] cipherText = cipher.doFinal(message.getMessage().getBytes());
-
-		dest.setIv(cipher.getIV());
 
 		// copy IV and cipher to a new array to send over the network
 		byte[] packet = new byte[cipherText.length + iv.length + MAX_NAME_SIZE + 1];
 
-		//System.arraycopy(ourUserName, 0, packet, 1, MAX_NAME_SIZE);
-		System.arraycopy(iv, 0, packet, 1, iv.length);
-		System.arraycopy(cipherText, 0, packet, iv.length + 2, cipherText.length);
+		byte[] bDestUser = String.format("%1$10s", destUser.getName()).getBytes();
+
+		System.arraycopy(bDestUser, 0, packet, 1, MAX_NAME_SIZE);
+		System.arraycopy(iv, 0, packet, MAX_NAME_SIZE + 1, iv.length);
+		System.arraycopy(cipherText, 0, packet, MAX_NAME_SIZE + iv.length + 1, cipherText.length);
 
 		// set the packet size
 		packet[0] = ((byte) (packet.length - 1));
@@ -88,7 +89,7 @@ public class MessageEncryptor {
 		// extract the user from the packet
 		byte[] bytesFromUser = Arrays.copyOf(packet, 10);
 
-		String fromUser = new String(bytesFromUser);
+		String fromUser = new String(bytesFromUser).trim();
 
 		// get user keys
 		DestinationUser from = ClientsKeyStore.getInstance().getUser(fromUser);
@@ -99,16 +100,18 @@ public class MessageEncryptor {
 			throw new Exception("Client isn't in the keystore");
 		}
 
-		byte[] iv = Arrays.copyOfRange(packet, 10, 27);
+		byte[] iv = Arrays.copyOfRange(packet, 10, 26);
 		from.setIv(iv);
 
 		configureCipher(from, false);
 
-		byte[] plainText = cipher.doFinal(packet);
+		byte[] cipherText = Arrays.copyOfRange(packet, 26, packet.length);
+
+		byte[] plainText = cipher.doFinal(cipherText);
 
 		long timestamp = bytesToLong(Arrays.copyOf(plainText, Long.BYTES));
 
-		byte[] msg = Arrays.copyOfRange(plainText, iv.length + Long.BYTES, packet.length);
+		byte[] msg = Arrays.copyOfRange(plainText, Long.BYTES + 1, plainText.length);
 
 		message.setMessage(new String(msg));
 		message.setTimestamp(timestamp);
@@ -120,21 +123,24 @@ public class MessageEncryptor {
 	private Cipher configureCipher(DestinationUser dest, boolean encrypt)
 			throws InvalidKeyException, InvalidAlgorithmParameterException {
 
-		byte[] iv = dest.getIv();
+		byte[] iv = new byte[16];
+		if (encrypt) {
+			SecureRandom random = new SecureRandom();
+			random.nextBytes(iv);
+		} else {
+			iv = dest.getIv();
+		}
+
 		SecretKeySpec secretKeySpec = new SecretKeySpec(dest.getSymmetricKey(), "AES");
 		IvParameterSpec ivSpec = new IvParameterSpec(iv);
 
-		cipher.init(encrypt ? Cipher.ENCRYPT_MODE : cipher.DECRYPT_MODE, secretKeySpec, ivSpec);
+		cipher.init(encrypt ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE, secretKeySpec, ivSpec);
 
 		return cipher;
 	}
 
 	public void encryptToServer(String message) {
 
-	}
-
-	private void updateDestIV(DestinationUser dest, byte[] iv) {
-		dest.setIv(iv);
 	}
 
 	private byte[] requestUserPublicKey(String destUser) throws IOException {

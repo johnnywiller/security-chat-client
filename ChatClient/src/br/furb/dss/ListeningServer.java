@@ -34,6 +34,7 @@ public class ListeningServer extends Thread {
 	public void resumeListen() {
 		synchronized (lock) {
 			lock.notify();
+			pause = false;
 		}
 	}
 
@@ -49,7 +50,7 @@ public class ListeningServer extends Thread {
 					lock.wait();
 
 				if (server.getIn().available() > 0) {
-					
+
 					receivedPacket = new byte[MAX_BUF];
 
 					server.getIn().read(receivedPacket);
@@ -72,17 +73,17 @@ public class ListeningServer extends Thread {
 
 		switch (tokenized[0]) {
 
-		case "/msg":
+		case "/startsession":
+			startSession(tokenized[1]);
+			break;
 
+		default:
 			Message msg = decryptPacket(packet);
 
 			System.out.println("received msg from [" + msg.getRecipient() + "] = " + msg.getMessage());
 
 			break;
 
-		case "/startsession":
-			startSession(tokenized[1]);
-			break;
 		}
 
 	}

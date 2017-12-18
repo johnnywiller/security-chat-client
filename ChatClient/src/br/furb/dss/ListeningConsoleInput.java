@@ -33,13 +33,14 @@ public class ListeningConsoleInput extends Thread {
 
 			Message msg = parseMessageString(read);
 
+			if (msg == null)
+				continue;
+
 			try {
 
 				encryptor.sendEncryptedMessage(msg);
 
-				//server.getOut().writeUTF(read);
-				//server.getOut().flush();
-
+			
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -47,6 +48,9 @@ public class ListeningConsoleInput extends Thread {
 	}
 
 	private Message parseMessageString(String message) {
+
+		if (message == null || message.trim().isEmpty())
+			return null;
 
 		Message msg = new Message();
 
@@ -70,7 +74,7 @@ public class ListeningConsoleInput extends Thread {
 			break;
 
 		}
-	
+
 		return null;
 	}
 
