@@ -31,7 +31,12 @@ public class ClientSessionInitiation {
 	public DestinationUser startSession(String user, boolean isInitialApplicant) throws Exception {
 
 		DestinationUser dest = new DestinationUser();
-
+		
+		// request public key from user that we want to talk
+		byte[] pubKey = requestDestUserPublicKey(user);
+		
+		dest.setPublicKey(pubKey);
+		
 		// verifies if is this user starting the DH process or is only handling a
 		// previous started DH from another user
 		if (isInitialApplicant) {
@@ -53,7 +58,7 @@ public class ClientSessionInitiation {
 		dh.passPublicToServer((DHPublicKey) keyPair.getPublic(), server.getOut());
 
 		// get B (g^b mod p) from the server
-		publicKey = dh.getServerPublic(server.getIn());
+		publicKey = dh.getServerPublic(server.getIn(), dest.getPublicKey());
 
 		// compute secret (s = B^a mod p)
 		secret = dh.computeDHSecretKey((DHPrivateKey) keyPair.getPrivate(), publicKey);
@@ -75,9 +80,7 @@ public class ClientSessionInitiation {
 	}
 
 	private void initiateKex(String value) throws IOException {
-		
-		System.out.println("initiate KEX");
-		
+
 		String msg = "/startsession " + value;
 
 		byte[] packet = new byte[msg.length() + 1];
@@ -88,15 +91,11 @@ public class ClientSessionInitiation {
 
 		server.getOut().write(packet);
 		server.getOut().flush();
-		
-		System.out.println("mandou");
 
 	}
-	
+
 	private void ackKex(String value) throws IOException {
-		
-		System.out.println("ack kex");
-		
+
 		String msg = "/acksession " + value;
 
 		byte[] packet = new byte[msg.length() + 1];
@@ -107,7 +106,28 @@ public class ClientSessionInitiation {
 
 		server.getOut().write(packet);
 		server.getOut().flush();
+
+	}
+
+	private byte[] requestDestUserPublicKey(String user) throws IOException {
+
+		String msg = "/getpublic " + user;
+
+		byte[] packet = new byte[msg.length() + 1];
+
+		packet[0] = (byte) msg.length();
+
+		System.arraycopy(msg.getBytes(), 0, packet, 1, msg.getBytes().length);
+
+		server.getOut().write(packet);
+		server.getOut().flush();
+
+		byte[] pubKey = new byte[256];
+
+		server.getIn().read(pubKey);
 		
+		return pubKey;
+
 	}
 
 }

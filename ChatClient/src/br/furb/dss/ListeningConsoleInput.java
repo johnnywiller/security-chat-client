@@ -40,7 +40,6 @@ public class ListeningConsoleInput extends Thread {
 
 				encryptor.sendEncryptedMessage(msg);
 
-			
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
