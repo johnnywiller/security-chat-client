@@ -42,13 +42,15 @@ public class DiffieHellmanUitls {
 		g = publicKey.getParams().getG();
 		y = publicKey.getY();
 
-		out.write(signDHParameter(p));
+		out.writeObject(signDHParameter(p));
 		out.flush();
-		
-		out.write(signDHParameter(g));
+
+		out.writeObject(signDHParameter(g));
+//		out.write(signDHParameter(g));
 		out.flush();
-		
-		out.write(signDHParameter(y));
+
+		out.writeObject(signDHParameter(y));
+//		out.write(signDHParameter(y));
 		out.flush();
 	}
 
@@ -69,7 +71,7 @@ public class DiffieHellmanUitls {
 		return publicKey;
 	}
 
-	private byte[] signDHParameter(BigInteger dhParam) throws Exception {
+	private DHParam signDHParameter(BigInteger dhParam) throws Exception {
 
 		byte[] signedDH = new byte[385];
 
@@ -80,26 +82,39 @@ public class DiffieHellmanUitls {
 		System.arraycopy(signature, 0, signedDH, 0, signature.length);
 		System.arraycopy(param, 0, signedDH, signature.length, param.length);
 
-		return signedDH;
+		DHParam dhparam = new DHParam();
+		
+		dhparam.setContent(param);
+		dhparam.setSignature(signature);
+		
+		return dhparam;
+		
 	}
 
 	private BigInteger verifyDHParametersSignature(ObjectInputStream in, byte[] pubKey) throws Exception {
+		
+//		System.out.println("verify DH parameters");
+//		System.out.println(Arrays.toString(pubKey));
+//		
+		//byte[] packet = new byte[385];
 
-		byte[] packet = new byte[385];
-
-		in.read(packet);
+		DHParam param = (DHParam) in.readObject();
+		
+		System.out.println("READ DH PARAM");
 		
 		//byte dhSize = packet[0];
 		
-		byte[] signature = Arrays.copyOf(packet, 256);
-		byte[] content = Arrays.copyOfRange(packet, 256, packet.length);
+		byte[] signature = param.getSignature();
+		byte[] content = param.getContent();
 
 		boolean trust = Signer.getInstance().verify(content, signature, pubKey);
-
-		if (trust)
+		
+		System.out.println("SIGNATURE OF DH PARAM " + (trust ? "MATCHES" : "DON'T MATCHES"));
+		
+		//if (trust)	
 			return new BigInteger(content);
-		else
-			throw new Exception("Verification of DH parameter's signature has failed, MitM attack?");
+		//else
+		//	throw new Exception("Verification of DH parameter's signature has failed, MitM attack?");
 	}
 
 	public byte[] computeDHSecretKey(DHPrivateKey privateKey, DHPublicKey publicKey) throws Exception {

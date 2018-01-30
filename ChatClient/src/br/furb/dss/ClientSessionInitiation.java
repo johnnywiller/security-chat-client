@@ -3,6 +3,7 @@ package br.furb.dss;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.MessageDigest;
+import java.security.PublicKey;
 import java.util.Arrays;
 
 import javax.crypto.interfaces.DHPrivateKey;
@@ -29,6 +30,8 @@ public class ClientSessionInitiation {
 
 	public DestinationUser startSession(String user, boolean isInitialApplicant) throws Exception {
 
+		System.out.println("STARTING SESSION (Kex process)");
+		
 		DestinationUser dest = new DestinationUser();
 		
 		// request public key from user that we want to talk
@@ -59,16 +62,22 @@ public class ClientSessionInitiation {
 		// get B (g^b mod p) from the server
 		publicKey = dh.getServerPublic(server.getIn(), dest.getPublicKey());
 
+		System.out.println("DH Public Key RECEIVED");
+		
 		// compute secret (s = B^a mod p)
 		secret = dh.computeDHSecretKey((DHPrivateKey) keyPair.getPrivate(), publicKey);
 
+		System.out.println("GENERATED SECRET FROM DH Kex");
+		
 		// use SHA2 to derive key
 		secret = MessageDigest.getInstance("SHA-256").digest(secret);
-
+		
 		// 128 bits for symmetric key encryption and 128 bits for message authentication
 		byte[] symmetricKey = Arrays.copyOf(secret, 16);
 		byte[] macKey = Arrays.copyOfRange(secret, 16, 32);
 
+		System.out.println("GENERATED SYMMETRIC AND MAC KEY");
+		
 		dest.setSymmetricKey(symmetricKey);
 		dest.setMacKey(macKey);
 		dest.setName(user);
@@ -105,10 +114,12 @@ public class ClientSessionInitiation {
 
 		server.getOut().write(packet);
 		server.getOut().flush();
+		
+		System.out.println("SENT ACK SESSION");
 
 	}
 
-	private byte[] requestDestUserPublicKey(String user) throws IOException {
+	private byte[] requestDestUserPublicKey(String user) throws IOException, ClassNotFoundException {
 
 		String msg = "/getpublic " + user;
 
@@ -117,17 +128,29 @@ public class ClientSessionInitiation {
 		packet[0] = (byte) msg.length();
 
 		System.arraycopy(msg.getBytes(), 0, packet, 1, msg.getBytes().length);
-
+		
+		
+		// consume socket for some reason
+		while(server.getIn().available() > 0) {
+			server.getIn().readByte();
+		}
+		
 		server.getOut().write(packet);
 		server.getOut().flush();
+		
+		System.out.println("SENT /getpublic PACKET");
+		
+		//byte[] pubKey = new byte[384];
 
-		byte[] pubKey = new byte[384];
+		PublicKey pubKey = (PublicKey) server.getIn().readObject();
 		
-		server.getIn().read(pubKey);
+		System.out.println("READ PUBLIC KEY FROM " + user);
+		System.out.println("KEY LENGTH IS: " + pubKey.getEncoded().length);
+		
 				
-		byte[] resizedPubKey = Arrays.copyOfRange(pubKey, 1, 200+pubKey[0]);
+		// byte[] resizedPubKey = Arrays.copyOfRange(pubKey, 1, 200+pubKey[0]);
 		
-		return resizedPubKey;
+		return pubKey.getEncoded();
 
 	}
 

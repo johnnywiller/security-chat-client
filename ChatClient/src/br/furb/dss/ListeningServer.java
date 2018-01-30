@@ -47,17 +47,20 @@ public class ListeningServer extends Thread {
 
 			while (true) {
 
-				if (pause)
+				if (pause) {
+					System.out.println("lock dormiu");
 					lock.wait();
+				}
+					
 
 				if (server.getIn().available() > 0) {
-					
-					System.out.println("read");
 					
 					receivedPacket = new byte[MAX_BUF];
 
 					server.getIn().read(receivedPacket);
-
+					
+					System.out.println("READ SERVER PACKET");
+					
 					receivedPacket = getResizedPacket(receivedPacket);
 
 					parsePacket(receivedPacket);
@@ -77,7 +80,6 @@ public class ListeningServer extends Thread {
 		switch (tokenized[0]) {
 
 		case "/startsession":
-			System.out.println("start session");
 			startSession(tokenized[1]);
 			break;
 		case "/online":
@@ -96,11 +98,11 @@ public class ListeningServer extends Thread {
 
 	private void printOnline() throws IOException {
 
-		String online = server.getIn().readLine();
-
-		while (online != "/endonline") {
-			System.out.println("[" + online + "]");
-		}
+//		String online = server.getIn().readLine();
+//		
+//		while (online != "/endonline") {
+//			System.out.println("[" + online + "]");
+//		}
 
 	}
 

@@ -40,9 +40,12 @@ public class MessageEncryptor {
 		// we don't have made a handshake with this client yet
 		// so we need to establish a session
 		if (destUser == null) {
+			
 			System.out.println("Initiating session");
 			listenServer.pauseListen();
-
+			
+			//Thread.sleep(1000);
+			
 			destUser = ClientSessionInitiation.getInstance(server).startSession(message.getRecipient(), true);
 
 			listenServer.resumeListen();
